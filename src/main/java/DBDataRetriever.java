@@ -1,7 +1,10 @@
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
+import com.sun.webkit.perf.WCFontPerfLogger;
 import org.json.JSONArray;
 import org.json.JSONObject;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import javax.sql.PooledConnection;
 import java.io.BufferedReader;
@@ -32,6 +35,7 @@ import java.util.TimeZone;
 
 
 public class DBDataRetriever {
+    private final static Logger logger = LoggerFactory.getLogger(DBDataRetriever.class);
     private final BufferedWriter bufferedFileWriter;
     private final static String ONEAPM_SERVER = "http://10.1.130.102:8091/api/v2";
     private final static String OPEN_ID = "9";
@@ -106,13 +110,18 @@ public class DBDataRetriever {
     }
 
     private void run() throws IOException, InterruptedException {
-        for (String serverUrl : this.apis) {
-            Metrics metrics = queryOneAPMApi(serverUrl);
-            //Metrics metrics = createOneAPMMetrics();
-            writeToFile(metrics);
-            writeToMetricServer(metrics);
+        while (true) {
+            for (String serverUrl : this.apis) {
+                Metrics metrics = queryOneAPMApi(serverUrl);
+                //Metrics metrics = createOneAPMMetrics();
+                writeToFile(metrics);
+                // writeToMetricServer(metrics);
 
-            Thread.sleep(1000);
+                Thread.sleep(1000);
+            }
+            // Thread.sleep(15000000); // 25 minutes
+            Thread.sleep(5000); // 5 sec
+            System.out.println("------------------");
         }
     }
 
@@ -180,7 +189,7 @@ public class DBDataRetriever {
                 response.append(inputLine);
             }
             final String content = response.toString();
-            System.out.println("\ncontent:" + content);
+            // System.out.println("\ncontent:" + content);
 
             return parseJSON(content);
         } catch(Exception e) {
@@ -226,8 +235,9 @@ public class DBDataRetriever {
             //String line = String.format("%s,%d,%s=%s,%f%n", metric.getMetric(), metric.getTimestamp(), tagEntry.getKey(), tagEntry.getValue(), metric.getValue());
             String payload = constructJson(metric);
 
-            this.bufferedFileWriter.write(payload + "\n");
-            this.bufferedFileWriter.flush();
+            //this.bufferedFileWriter.write(payload + "\n");
+            // this.bufferedFileWriter.flush();
+            logger.info(payload);
         }
     }
 
@@ -247,7 +257,7 @@ public class DBDataRetriever {
             wr = connection.getOutputStream();
             for (Metric metric :metrics.metrics) {
                 String payload = constructJson(metric);
-                System.out.println(payload);
+                // System.out.println(payload);
                 byte[] b = payload.getBytes("UTF-8");
                 wr.write(b);
             }
@@ -262,7 +272,7 @@ public class DBDataRetriever {
                     response.append(line);
                     response.append('\r');
                 }
-                System.out.println(response.toString());
+                // System.out.println(response.toString());
             } catch(Exception e) {
                 System.out.println(e);
             } finally {
