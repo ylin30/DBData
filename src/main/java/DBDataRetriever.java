@@ -111,16 +111,16 @@ public class DBDataRetriever {
 
     private void run() throws IOException, InterruptedException {
         while (true) {
-            //for (String serverUrl : this.apis) {
-                //Metrics metrics = queryOneAPMApi(serverUrl);
-                Metrics metrics = createOneAPMMetrics();
-                //writeToFile(metrics);
-                writeToMetricServer(metrics);
+            for (String serverUrl : this.apis) {
+                Metrics metrics = queryOneAPMApi(serverUrl);
+                //Metrics metrics = createOneAPMMetrics();
+                writeToFile(metrics);
+                //writeToMetricServer(metrics);
 
                 Thread.sleep(1000);
-            //}
-            // Thread.sleep(15000000); // 25 minutes
-            Thread.sleep(5000); // 5 sec
+            }
+            Thread.sleep(15000000); // 25 minutes
+            //Thread.sleep(5000); // 5 sec
             System.out.println("------------------");
         }
     }
@@ -257,7 +257,7 @@ public class DBDataRetriever {
             connection.setRequestProperty("Accept", "application/json");
             wr = connection.getOutputStream();
             String payload = constructJson(metrics);
-            System.out.println(payload);
+            //System.out.println(payload);
             byte[] b = payload.getBytes("UTF-8");
             wr.write(b);
             wr.flush();
@@ -271,7 +271,7 @@ public class DBDataRetriever {
                     response.append(line);
                     response.append('\r');
                 }
-                System.out.println(response.toString());
+                //System.out.println(response.toString());
             } catch(Exception e) {
                 System.out.println(e);
             } finally {
