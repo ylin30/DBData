@@ -1,4 +1,4 @@
-package com.cloudmon
+package com.cloudmon;
 import java.util.HashMap;
 import java.util.Map;
 

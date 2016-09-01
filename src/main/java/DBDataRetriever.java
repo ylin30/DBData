@@ -1,6 +1,7 @@
+import com.cloudmon.JacksonUtil;
+import com.cloudmon.RequestWapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
-import com.sun.webkit.perf.WCFontPerfLogger;
 import org.json.JSONArray;
 import org.json.JSONObject;
 import org.slf4j.Logger;
@@ -24,14 +25,10 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Calendar;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Random;
-import java.util.TimeZone;
 
 
 public class DBDataRetriever {
@@ -270,8 +267,7 @@ public class DBDataRetriever {
                 Metrics metrics = queryOneAPMApi(reqWapper);
                 //Metrics metrics = createOneAPMMetrics();
                 writeToFile(metrics);
-                // writeToMetricServer(metrics);
-
+                writeToMetricServer(metrics);
                 Thread.sleep(1000);
             }
             // Thread.sleep(15000000); // 25 minutes
@@ -284,7 +280,7 @@ public class DBDataRetriever {
         System.out.println("connect to ONEAPM server " + serverUrl);
         BufferedReader in = null;
         try {
-            URL url = new URL(serverUrl);
+            URL url = new URL(serverUrl.getUrl());
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
             int responseCode = con.getResponseCode();
@@ -301,7 +297,7 @@ public class DBDataRetriever {
             final String content = response.toString();
             // System.out.println("\ncontent:" + content);
 
-            return parseJSON(content);
+            return parseJSON(content,serverUrl);
         } catch(Exception e) {
             System.out.println(String.format("error: failed to query metric %s, exception %s", serverUrl, e));
             throw e;
@@ -365,7 +361,7 @@ public class DBDataRetriever {
         InputStream is = null;
         try {
             //URL url = new URL("http://172.16.210.247:4242/api/put?details");
-            URL url = new URL("http://localhost:4242/api/put?details");
+            URL url = new URL("http://192.168.1.144:4242/api/put?details");
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
