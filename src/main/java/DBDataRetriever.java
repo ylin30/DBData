@@ -24,11 +24,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 
 public class DBDataRetriever {
@@ -41,7 +37,7 @@ public class DBDataRetriever {
     private final static int INTERVAL = 60000;
     private final static String END_TIME = "1472541600000";
 
-
+    private final Random rand = new Random();
     private final List<RequestWapper> apis = new ArrayList<>();
 
     public static void main(String[] args) throws IOException {
@@ -356,12 +352,43 @@ public class DBDataRetriever {
             logger.info(payload);
         }
     }
+    private Metrics createOneAPMMetrics() {
+
+        //String[] oneAPMMetrics = new String[] {"Spring.com.srie.cis.service.impl.WSServiceImpl.getDispatchCode", "JSP.up.upload.jsp", "JSP.esign.creatpng.jsp",
+        //"Servlet.ESignServlet", "SpringController.cis.createSerAction.do", "JSP.Cc.createSer_005faction.jsp", "JSP.Cc.createSer_005faction.jsp", "JSP.ser.listSer.jsp",
+        //"JSP.esign.sendEmail.jsp", "JSP.ser.ex_005freceiving.jsp", "Servlet.EsignShowServlet"};
+
+        RequestWapper req = new RequestWapper();
+        req.setUrl(String.format("%s/transactions/WebTransaction/response%%20time?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
+        req.setType("points");
+        req.setMetric("avg_response_time");
+        req.setTags("service","web_transaction");
+        this.apis.add(req);
+
+        RequestWapper[] oneAPMMetrics = new RequestWapper[]{req};
+        Metrics metrics = new Metrics();
+        Calendar start = Calendar.getInstance(TimeZone.getTimeZone("Asia/Beijing"));
+        start.add(Calendar.MINUTE, -60);
+        int count = 60;
+        while (count-- > 0) {
+            for (RequestWapper requestWapper : oneAPMMetrics) {
+                Metric m = new Metric(requestWapper.getMetric(), start.getTime().getTime(), rand.nextDouble() * 20,requestWapper.getTags());
+                metrics.metrics.add(m);
+            }
+            start.add(Calendar.MINUTE, 1);
+        }
+        return metrics;
+    }
+
     private  void writeToMetricServer(Metrics metrics) throws IOException, InterruptedException {
+        if(metrics == null){
+            return ;
+        }
         OutputStream wr = null;
         InputStream is = null;
         try {
             //URL url = new URL("http://172.16.210.247:4242/api/put?details");
-            URL url = new URL("http://192.168.1.144:4242/api/put?details");
+            URL url = new URL("http://192.168.1.46:4242/api/put?details");
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
