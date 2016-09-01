@@ -324,7 +324,7 @@ public class DBDataRetriever {
             JSONObject resultObj = results.getJSONObject(i);
             String tagName = resultObj.getString("name");
             String metricName = reqWapper.getMetric();
-            reqWapper.setTags("type",tagName);
+            reqWapper.setTags("type",tagName.replace("/","."));
             JSONArray points = resultObj.getJSONArray("points");
             for (int j = 0; j < points.length(); j++) {
                 JSONObject pointObj = points.getJSONObject(j);
