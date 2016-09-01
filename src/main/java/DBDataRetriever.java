@@ -271,11 +271,12 @@ public class DBDataRetriever {
                 //Metrics metrics = createOneAPMMetrics();
                 writeToFile(metrics);
                 // writeToMetricServer(metrics);
+
                 Thread.sleep(1000);
             }
-            Thread.sleep(15000000); // 25 minutes
-            //Thread.sleep(5000); // 5 sec
-            //System.out.println("------------------");
+            // Thread.sleep(15000000); // 25 minutes
+            Thread.sleep(5000); // 5 sec
+            System.out.println("------------------");
         }
     }
 
@@ -283,7 +284,7 @@ public class DBDataRetriever {
         System.out.println("connect to ONEAPM server " + serverUrl);
         BufferedReader in = null;
         try {
-            URL url = new URL(serverUrl.getUrl());
+            URL url = new URL(serverUrl);
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
             int responseCode = con.getResponseCode();
@@ -298,7 +299,9 @@ public class DBDataRetriever {
                 response.append(inputLine);
             }
             final String content = response.toString();
-            return parseJSON(content, serverUrl);
+            // System.out.println("\ncontent:" + content);
+
+            return parseJSON(content);
         } catch(Exception e) {
             System.out.println(String.format("error: failed to query metric %s, exception %s", serverUrl, e));
             throw e;
@@ -357,21 +360,132 @@ public class DBDataRetriever {
             logger.info(payload);
         }
     }
+    private  void writeToMetricServer(Metrics metrics) throws IOException, InterruptedException {
+        OutputStream wr = null;
+        InputStream is = null;
+        try {
+            //URL url = new URL("http://172.16.210.247:4242/api/put?details");
+            URL url = new URL("http://localhost:4242/api/put?details");
 
+            HttpURLConnection connection = (HttpURLConnection) url.openConnection();
+            connection.setRequestMethod("POST");
+            connection.setUseCaches(false);
+            connection.setDoOutput(true);
+            connection.setDoInput(true);
+            connection.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
+            connection.setRequestProperty("Accept", "application/json");
+            wr = connection.getOutputStream();
+            String payload = constructJson(metrics);
+            //System.out.println(payload);
+            byte[] b = payload.getBytes("UTF-8");
+            wr.write(b);
+            wr.flush();
 
+            try {
+                is = connection.getInputStream();
+                BufferedReader rd = new BufferedReader(new InputStreamReader(is));
+                StringBuilder response = new StringBuilder(); // or StringBuffer if Java version 5+
+                String line;
+                while ((line = rd.readLine()) != null) {
+                    response.append(line);
+                    response.append('\r');
+                }
+                //System.out.println(response.toString());
+            } catch(Exception e) {
+                System.out.println(e);
+            } finally {
+                if (is != null) {
+                    is.close();
+                }
+            }
+        } finally {
+            if (wr != null) {
+                wr.close();
+            }
+        }
+    }
 
     private void close() throws IOException {
         this.bufferedFileWriter.close();
     }
 
-
+    private static String constructJson(Metrics metrics) throws JsonProcessingException {
+        return JacksonUtil.toJson(metrics.metrics);
+    }
 
     private static String constructJson(Metric metric) throws JsonProcessingException {
         return JacksonUtil.toJson(metric);
     }
 
+    private static void queryOracle(String query) {
+        System.out.println("-------- Oracle JDBC Connection Testing ------");
 
+        try {
+            Class.forName("oracle.jdbc.driver.OracleDriver");
+        } catch (ClassNotFoundException e) {
+            System.out.println("Where is your Oracle JDBC Driver?");
+            e.printStackTrace();
+            return;
+        }
+        System.out.println("Oracle JDBC Driver Registered!");
 
+        Connection connection = null;
+        Statement stmt = null;
+        try {
+
+            connection = DriverManager.getConnection(
+                    "jdbc:oracle:thin:@10.1.132.118:1521:orcl", "jhpt_ky", "123456");
+            stmt = connection.createStatement();
+            ResultSet rs = stmt.executeQuery(query);
+            while (rs.next()) {
+                int count = rs.getInt(1);
+                System.out.println(count);
+            }
+
+        } catch (SQLException e) {
+            System.out.println("Connection Failed! Check output console");
+            e.printStackTrace();
+            return;
+        }
+    }
+
+    private static void queryMysql() {
+        System.out.println("test started");
+        String dbUrl = "jdbc:mysql://localhost:3306/grafana";
+        String user = "root";
+        String password = "password";
+
+        MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
+        ds.setUrl(dbUrl);
+        ds.setUser(user);
+        ds.setPassword(password);
+
+        PooledConnection pcon;
+        Connection con = null;
+        PreparedStatement stmt = null;
+        ResultSet rs = null;
+        try {
+            pcon = ds.getPooledConnection();
+            con = pcon.getConnection();
+            //stmt = con.createStatement();
+            //rs = stmt.executeQuery("select empid, name from Employee");
+            stmt = con.prepareStatement("select empid, name from Employee");
+            rs = stmt.executeQuery();
+            while(rs.next()){
+                System.out.println("Employee ID="+rs.getInt("empid")+", Name="+rs.getString("name"));
+            }
+        } catch (SQLException e) {
+            e.printStackTrace();
+        }finally{
+            try {
+                if(rs != null) rs.close();
+                if(stmt != null) stmt.close();
+                if(con != null) con.close();
+            } catch (SQLException e) {
+                e.printStackTrace();
+            }
+        }
+    }
 
     private static class Metric {
         private final String metric;
