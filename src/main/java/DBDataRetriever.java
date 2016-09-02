@@ -263,7 +263,7 @@ public class DBDataRetriever {
                 Metrics metrics = queryOneAPMApi(reqWapper);
                 //Metrics metrics = createOneAPMMetrics();
                 writeToFile(metrics);
-                //writeToMetricServer(metrics);
+                writeToMetricServer(metrics);
                 Thread.sleep(1000);
             }
             Thread.sleep(15000000); // 25 minutes
