@@ -259,15 +259,19 @@ public class DBDataRetriever {
 
     private void run() throws IOException, InterruptedException {
         while (true) {
-            for (RequestWapper reqWapper : this.apis) {
-                Metrics metrics = queryOneAPMApi(reqWapper);
-                //Metrics metrics = createOneAPMMetrics();
-                writeToFile(metrics);
-                writeToMetricServer(metrics);
-                Thread.sleep(1000);
+            try {
+                for (RequestWapper reqWapper : this.apis) {
+                    Metrics metrics = queryOneAPMApi(reqWapper);
+                    //Metrics metrics = createOneAPMMetrics();
+                    writeToFile(metrics);
+                    // writeToMetricServer(metrics);
+                    Thread.sleep(1000);
+                }
+                Thread.sleep(900000); // 15 minutes
+                //Thread.sleep(5000); // 5 sec
+            } catch (Exception e) {
+                logger.info("In run:", e);
             }
-            Thread.sleep(15000000); // 25 minutes
-            //Thread.sleep(5000); // 5 sec
             System.out.println("------------------");
         }
     }
