@@ -267,11 +267,13 @@ public class DBDataRetriever {
                     // writeToMetricServer(metrics);
                     Thread.sleep(1000);
                 }
-                Thread.sleep(900000); // 15 minutes
-                //Thread.sleep(5000); // 5 sec
+                Thread.sleep(900000);
             } catch (Exception e) {
-                logger.info("In run:", e);
+                logger.info("In run:" + e.getMessage());
+                // If exceptions, we refresh more frequently.
+                Thread.sleep(300000);
             }
+
             System.out.println("------------------");
         }
     }
