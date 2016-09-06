@@ -279,6 +279,7 @@ public class DBDataRetriever {
             } catch (Exception e) {
                 System.out.println("In run:"+ e);
             }
+
             System.out.println("------------------");
         }
     }
