@@ -1,5 +1,6 @@
 import com.cloudmon.JacksonUtil;
 import com.cloudmon.RequestWapper;
+import com.cloudmon.agent.LogRetriever;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import org.json.JSONArray;
@@ -17,6 +18,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
+import java.net.SocketException;
 import java.net.URL;
 import java.sql.Connection;
 import java.sql.DriverManager;
@@ -25,6 +27,8 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.*;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 
 public class DBDataRetriever {
@@ -33,9 +37,8 @@ public class DBDataRetriever {
     private final static String ONEAPM_SERVER = "http://10.1.130.102:8091/api/v2";
     private final static String OPEN_ID = "9";
     private final static String APP_NAME = "dztier";
-    private final static int SPAN_TIME = 1800000;
+    private final static int SPAN_TIME = 240000;
     private final static int INTERVAL = 60000;
-    private final static String END_TIME = "1472541600000";
 
     private final Random rand = new Random();
     private final List<RequestWapper> apis = new ArrayList<>();
@@ -44,6 +47,8 @@ public class DBDataRetriever {
         String filename = args.length > 0 ? args[0] : null;
         DBDataRetriever retriever = null;
         try {
+            ExecutorService es = Executors.newFixedThreadPool(2);
+            es.execute(new LogRetriever());
             retriever = new DBDataRetriever(filename);
             retriever.run();
         } catch(Exception e) {
@@ -264,13 +269,15 @@ public class DBDataRetriever {
                     Metrics metrics = queryOneAPMApi(reqWapper);
                     //Metrics metrics = createOneAPMMetrics();
                     writeToFile(metrics);
-                    // writeToMetricServer(metrics);
+                    writeToMetricServer(metrics);
                     Thread.sleep(1000);
                 }
-                Thread.sleep(900000); // 15 minutes
-                //Thread.sleep(5000); // 5 sec
+                Thread.sleep(60000); // 1 minutes
+            } catch (SocketException e){
+                System.out.println("network have disconnected");
+                Thread.sleep(30000);
             } catch (Exception e) {
-                logger.info("In run:", e);
+                System.out.println("In run:"+ e);
             }
             System.out.println("------------------");
         }
@@ -328,9 +335,9 @@ public class DBDataRetriever {
             JSONObject resultObj = results.getJSONObject(i);
             String tagName = resultObj.getString("name");
             String metricName = reqWapper.getMetric();
-            reqWapper.setTags("type",tagName.replace("/","."));
+            reqWapper.setTags("host",tagName.replace("/","."));
             JSONArray points = resultObj.getJSONArray("points");
-            for (int j = 0; j < points.length(); j++) {
+            for (int j = 0; j < points.length()-1; j++) {
                 JSONObject pointObj = points.getJSONObject(j);
                 double val = pointObj.getJSONObject("data").getDouble(reqWapper.getMetric());
                 long ts = pointObj.getJSONObject("time").getLong("endTime");
@@ -392,7 +399,7 @@ public class DBDataRetriever {
         InputStream is = null;
         try {
             //URL url = new URL("http://172.16.210.247:4242/api/put?details");
-            URL url = new URL("http://192.168.1.46:4242/api/put?details");
+            URL url = new URL("http://localhost:4242/api/put?details");
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");

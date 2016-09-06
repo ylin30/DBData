@@ -27,6 +27,7 @@
                     <showDeprecation>true</showDeprecation>
                     <showWarnings>true</showWarnings>
                     <fork>true</fork>
+                    <encoding>UTF-8</encoding>
                 </configuration>
             </plugin>
             <plugin>
