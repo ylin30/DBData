@@ -276,18 +276,37 @@ public class DBDataRetriever {
             String line;
             while ((line = br.readLine()) != null) {
                 try {
+                    System.out.println("line:" + line);
+                    // 10.1.16.183 - - [07/Sep/2016:09:24:43 +0800] "GET /dell/images/top_bg1.jpg HTTP/1.1" 304 0
                     if (line.contains("GET /") || line.contains("POST /") || line.contains("HEAD /")) {
                         String[] components = line.split(" ");
-                        String date = components[0].substring(1).replace("Z", "-0000");
-                        String host = components[2];
-                        String action = components[7].substring(1);
-                        String val = components[10];
-                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+                        System.out.println("Components:" + Arrays.toString(components));
+
+                        String host = components[0];
+                        System.out.println("host:" + host);
+
+                        String date = components[3].substring(1);
+                        System.out.println("date:" + date);
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MMM/yyyy:HH:mm:ss");
                         Date parsedDate = dateFormat.parse(date);
                         long ts = parsedDate.getTime();
+                        System.out.println("date:" + parsedDate + " ts:"+ ts);
+
+                        String action = components[5].substring(1);
+                        System.out.println("action:" + action);
+
+                        String path = components[6];
+                        System.out.println("path:" + path);
+
+                        String respCode = components[8];
+                        System.out.println("respCode:" + respCode);
+
+                        String respByteNum = components[9];
+                        System.out.println("respByteNum:" + respByteNum);
+
                         Map<String, String> tags = new HashMap<>();
                         tags.put("Host", host);
-                        Metric m = new Metric("access." + action, ts, Double.parseDouble(val), tags);
+                        Metric m = new Metric("access." + action, ts, Double.parseDouble(respCode), tags);
                         metrics.metrics.add(m);
                     }
                 } catch(Exception e) {
@@ -314,7 +333,7 @@ public class DBDataRetriever {
                 System.out.println("network have disconnected");
                 Thread.sleep(30000);
             } catch (Exception e) {
-                System.out.println("In run:"+ e);
+                System.out.println("In run:" + e);
             }
 
             System.out.println("------------------");
