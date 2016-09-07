@@ -1,6 +1,6 @@
 import com.cloudmon.JacksonUtil;
 import com.cloudmon.RequestWapper;
-import com.cloudmon.agent.LogRetriever;
+//import com.cloudmon.agent.LogRetriever;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import org.json.JSONArray;
@@ -12,6 +12,7 @@ import javax.sql.PooledConnection;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +27,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -43,14 +45,20 @@ public class DBDataRetriever {
     private final Random rand = new Random();
     private final List<RequestWapper> apis = new ArrayList<>();
 
-    public static void main(String[] args) throws IOException {
-        String filename = args.length > 0 ? args[0] : null;
+    public static void main(String[] args) throws Exception {
+        String filename = args.length > 1 ? args[1] : null;
+        if (args.length < 1) {
+            throw new Exception("need to log file name");
+        }
+        String logfilename = args[0];
         DBDataRetriever retriever = null;
         try {
-            ExecutorService es = Executors.newFixedThreadPool(2);
+            retriever = new DBDataRetriever(filename);
+            retriever.processLog(logfilename);
+            /*ExecutorService es = Executors.newFixedThreadPool(2);
             es.execute(new LogRetriever());
             retriever = new DBDataRetriever(filename);
-            retriever.run();
+            retriever.run();*/
         } catch(Exception e) {
             System.out.println(e);
         } finally {
@@ -260,6 +268,35 @@ public class DBDataRetriever {
         req21.setType("slowSqls_trace");
         this.apis.add(req21);
 
+    }
+
+    public void processLog(String filename) throws Exception {
+        Metrics metrics = new Metrics();
+        try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
+            String line;
+            while ((line = br.readLine()) != null) {
+                try {
+                    if (line.contains("GET /") || line.contains("POST /") || line.contains("HEAD /")) {
+                        String[] components = line.split(" ");
+                        String date = components[0].substring(1).replace("Z", "-0000");
+                        String host = components[2];
+                        String action = components[7].substring(1);
+                        String val = components[10];
+                        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSZ");
+                        Date parsedDate = dateFormat.parse(date);
+                        long ts = parsedDate.getTime();
+                        Map<String, String> tags = new HashMap<>();
+                        tags.put("Host", host);
+                        Metric m = new Metric("access." + action, ts, Double.parseDouble(val), tags);
+                        metrics.metrics.add(m);
+                    }
+                } catch(Exception e) {
+                    System.out.println("error parsing log entry. " + e.toString());
+                }
+            }
+        }
+
+        writeToFile(metrics);
     }
 
     private void run() throws IOException, InterruptedException {
