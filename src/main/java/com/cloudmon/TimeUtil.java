@@ -1,5 +1,7 @@
 package com.cloudmon;
 
+import java.text.DateFormat;
+import java.text.ParseException;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -16,4 +18,31 @@ public class TimeUtil {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd@HH:mm:ss");
         return sdf.format(new Date(time)).replace("@","T").replace(":","%3A")+".000Z";
     }
+
+    public static long getDistanceTimeWithFormat(String str1, String str2, DateFormat format) {
+        DateFormat df = format;
+        Date one;
+        Date two;
+        long day = 0;
+        long hour = 0;
+        long min = 0;
+        long sec = 0;
+        try {
+            one = df.parse(str1);
+            two = df.parse(str2);
+            long time1 = one.getTime();
+            long time2 = two.getTime();
+            long diff ;
+            if(time1<time2) {
+                diff = time2 - time1;
+            } else {
+                diff = time1 - time2;
+            }
+            sec = (diff/1000-day*24*60*60-hour*60*60-min*60);
+        } catch (ParseException e) {
+            e.printStackTrace();
+        }
+        return sec;
+    }
+
 }

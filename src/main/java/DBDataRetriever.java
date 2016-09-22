@@ -415,7 +415,6 @@ public class DBDataRetriever {
             byte[] b = payload.getBytes("UTF-8");
             wr.write(b);
             wr.flush();
-
             try {
                 is = connection.getInputStream();
                 BufferedReader rd = new BufferedReader(new InputStreamReader(is));
@@ -522,7 +521,7 @@ public class DBDataRetriever {
         }
     }
 
-    private static class Metric {
+    class Metric {
         private final String metric;
         private Map<String, String> tags = new HashMap();
         private final long timestamp;

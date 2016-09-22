@@ -20,7 +20,7 @@ import java.util.concurrent.TimeUnit;
 public class LogRetriever implements Runnable{
     private final static Logger logger = LoggerFactory.getLogger(LogRetriever.class);
     //history_dump
-    private static final String PREFIXS_LOGURL = "http://10.1.130.101:12900/search/universal/absolute?query=*&from=2016-08-31T19%3A22%3A46.000Z&to=2016-09-01T13%3A57%3A58.000Z&limit=999";
+    private static final String PREFIXS_LOGURL = "http://10.1.130.101:12900/search/universal/relative?query=*&range=20&limit=999";
     //timeline
     private String PREFIXS_TIMELINE_LOGURL = "http://10.1.130.101:12900/search/universal/absolute?query=*&limit=999&from=%s&to=%s";
 
@@ -34,26 +34,27 @@ public class LogRetriever implements Runnable{
 //                logger.info(log);
 //            }
             int timeCheckPoint = 0;
-//            while(timeCheckPoint < 60*60*24*5){
-//                int shift = timeCheckPoint + (60*10);
-//
-//                String q = queryOneAPMApi(String.format(PREFIXS_TIMELINE_LOGURL, TimeUtil.beforTime(shift),TimeUtil.beforTime(timeCheckPoint)));
-//                List<LogInfo> logs = parseJSON(q);
-//                for(LogInfo log : logs){
-//                    //System.out.println("["+log.getTimestamp()+" "+log.getSource()+"] "+log.message);
-//                    logger.info("["+log.getTimestamp()+" "+log.getSource()+"] "+log.message);
-//                }
-//                timeCheckPoint += (60*10);
-//                Thread.sleep(1000);
-//            }
+            while(timeCheckPoint < 60*60*24*5){
+                int shift = timeCheckPoint + (60*10);
+
+                String q = queryOneAPMApi(String.format(PREFIXS_TIMELINE_LOGURL, TimeUtil.beforTime(shift),TimeUtil.beforTime(timeCheckPoint)));
+                List<LogInfo> logs = parseJSON(q);
+                for(LogInfo log : logs){
+                    //System.out.println("["+log.getTimestamp()+" "+log.getSource()+"] "+log.message);
+                    logger.info("["+log.getTimestamp()+" "+log.getSource()+"] "+log.message);
+                }
+                timeCheckPoint += (60*10);
+                Thread.sleep(1000);
+            }
 
             while(true){
                 try {
-                    String q = queryOneAPMApi(String.format(PREFIXS_TIMELINE_LOGURL, TimeUtil.beforTime(60*10+10000),TimeUtil.now()));
+                    String q = queryOneAPMApi(String.format(PREFIXS_TIMELINE_LOGURL, TimeUtil.beforTime(60*300+10000),TimeUtil.now()));
                     List<LogInfo> logs = parseJSON(q);
                     for(LogInfo log : logs){
                         logger.info("["+log.getTimestamp()+" "+log.getSource()+"] "+log.message);
                     }
+
                     TimeUnit.MINUTES.sleep(10);
                 } catch (Exception e){
                     TimeUnit.MINUTES.sleep(10);
@@ -61,7 +62,15 @@ public class LogRetriever implements Runnable{
             }
         }  catch (InterruptedException e) {
             e.printStackTrace();
+        } catch (IOException e) {
+            e.printStackTrace();
         }
+
+        //while(true)
+        //query
+        //parse
+        //write into log File
+        //write into openTSDB
     }
 
 
