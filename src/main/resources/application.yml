@@ -1,0 +1,32 @@
+# Timetask 时间
+# 所有的service 和对应的token 暂时是写成配置. 后面看看是不是有人提供service 给我们. 可以做成filter 的功能. 在parse 之前.
+
+dump:
+  - metricsLog: /home/111.log
+  - systemsLog: /tmp/tides.log
+
+AInsigth:
+  interval: 1m
+  applications:
+    - name: dztier
+      openId: 9
+      url: http://10.1.130.102:8091/api/v2
+      token: 7ef809091178e7a3093bde7cc6a83d0b5700cbeb11dc6fdaf8c8f18bee46118b2c385b65189fee4d1d5c2ee042df1566a0c0
+
+
+  services:
+    - uri: /applications?openid=%s&application_name=%s&span_time=%s&interval=%s
+      formatter: modelname . elum class (metrics, none, log, )
+      writer: writerName(defalut by openTSDB) elum class
+      alias: will be metrics name , use response name by defalut
+      tags:
+        - service: web_transation
+    - uri: /applications?openid=%s&application_name=%s&span_time=%s&interval=%s
+      formatter: modelname . elum class (metrics, none, log, )
+      writer: writerName(defalut by openTSDB) elum class
+      alias: will be metrics name , use response name by defalut
+      tags:
+        - service: web_transation
+
+
+metricsServer: http://localhost:4242/api/put?details

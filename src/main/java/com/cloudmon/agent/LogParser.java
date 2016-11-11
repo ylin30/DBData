@@ -14,7 +14,7 @@ public class LogParser {
     private static final String FORMAT_DATE = "dd/MMM/yyyy:HH:mm:ss";
     private Map<String, Tag> action2Value = new HashMap<String, Tag>();
     private String host = "";
-    private String time1 = "01/Aug/2016:00:00:00";
+    private String time1 = "01/Sep/2016:00:00:00";
 
     public void processLog(String filename) throws Exception {
         try (BufferedReader br = new BufferedReader(new FileReader(filename))) {
@@ -27,6 +27,9 @@ public class LogParser {
                         String[] components = line.split(" ");
                         //System.out.println("Components:" + Arrays.toString(components));
 
+                        if (getDistanceTime(time1, components[3].substring(1)) < 0) {
+                            return;
+                        }
                         while (getDistanceTime(time1, components[3].substring(1)) > 60) {
                             pushMetric();
                             time1 = plusTime(time1, 60);
@@ -40,7 +43,7 @@ public class LogParser {
                         SimpleDateFormat dateFormat = new SimpleDateFormat(FORMAT_DATE);
                         Date parsedDate = dateFormat.parse(date);
                         long ts = parsedDate.getTime();
-                        System.out.println("date:" + parsedDate + " ts:" + ts);
+                        //System.out.println("date:" + parsedDate + " ts:" + ts);
 
                         String action = components[5].substring(1);
                         // System.out.println("action:" + action);
@@ -56,7 +59,7 @@ public class LogParser {
 
 
                         counter(action,host,respCode);
-                      //  counter(host + "/" + action + "/" + respCode);
+                        //counter(host + "/" + action + "/" + respCode);
                     }
                 } catch (Exception e) {
                     System.out.println("error parsing log entry. " + e.toString());
@@ -136,7 +139,7 @@ public class LogParser {
     }
 
     public void reset(){
-        time1 = "01/Aug/2016:00:00:00";
+        time1 = "01/Sep/2016:00:00:00";
     }
 
     class Tag{
