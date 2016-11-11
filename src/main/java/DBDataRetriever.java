@@ -1,6 +1,5 @@
 import com.cloudmon.JacksonUtil;
 import com.cloudmon.RequestWapper;
-import com.cloudmon.agent.LogRetriever;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import org.json.JSONArray;
@@ -9,26 +8,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import javax.sql.PooledConnection;
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-import java.io.OutputStream;
+import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URL;
-import java.sql.Connection;
-import java.sql.DriverManager;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
+import java.sql.*;
 import java.util.*;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 
 public class DBDataRetriever {
@@ -47,8 +32,6 @@ public class DBDataRetriever {
         String filename = args.length > 0 ? args[0] : null;
         DBDataRetriever retriever = null;
         try {
-            ExecutorService es = Executors.newFixedThreadPool(2);
-            es.execute(new LogRetriever());
             retriever = new DBDataRetriever(filename);
             retriever.run();
         } catch(Exception e) {
@@ -336,7 +319,8 @@ public class DBDataRetriever {
             JSONObject resultObj = results.getJSONObject(i);
             String tagName = resultObj.getString("name");
             String metricName = reqWapper.getMetric();
-            reqWapper.setTags("host",tagName.replace("/","."));
+            reqWapper.setTags("host","dztier");
+            reqWapper.setTags("name",tagName.replace("/","."));
             JSONArray points = resultObj.getJSONArray("points");
             for (int j = 0; j < points.length()-1; j++) {
                 JSONObject pointObj = points.getJSONObject(j);
@@ -353,16 +337,8 @@ public class DBDataRetriever {
         if(metrics == null)
             return ;
 
-        for (Metric metric : metrics.metrics) {
-            final Iterator<Map.Entry<String, String>> it = metric.getTags().entrySet().iterator();
-            final Map.Entry<String, String> tagEntry = it.next();
-            //String line = String.format("%s,%d,%s=%s,%f%n", metric.getMetric(), metric.getTimestamp(), tagEntry.getKey(), tagEntry.getValue(), metric.getValue());
-            String payload = constructJson(metric);
-
-            //this.bufferedFileWriter.write(payload + "\n");
-            // this.bufferedFileWriter.flush();
-            logger.info(payload);
-        }
+        String payload = constructJson(metrics);
+        logger.info(payload);
     }
     private Metrics createOneAPMMetrics() {
 
@@ -400,7 +376,7 @@ public class DBDataRetriever {
         InputStream is = null;
         try {
             //URL url = new URL("http://172.16.210.247:4242/api/put?details");
-            URL url = new URL("http://localhost:4242/api/put?details");
+            URL url = new URL("http://10.1.130.46:4242/api/put");
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
@@ -444,7 +420,7 @@ public class DBDataRetriever {
     }
 
     private static String constructJson(Metrics metrics) throws JsonProcessingException {
-        return JacksonUtil.toJson(metrics.metrics);
+        return JacksonUtil.toJson(metrics);
     }
 
     private static String constructJson(Metric metric) throws JsonProcessingException {
@@ -554,7 +530,7 @@ public class DBDataRetriever {
 
     private static class Metrics {
         public final List<Metric> metrics = new ArrayList<>();
-        //public final String token="7ef809091178e7a3093bde7cc6a83d0b5700cbeb11dc6fdaf8c8f18bee46118b2c385b65189fee4d1d5c2ee042df1566a0c0";
+        public final String token="bd4d77d0e1dc8317abce2f51b52e08c35e9572a10d7d055ebb635e1f159b384464e85f0f1fd16a526fca440ff88377c3d308";
     }
 
     private static class Tuple {
