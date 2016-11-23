@@ -1,17 +1,16 @@
 package com.cloudmon.api;
 
-import com.eclipsesource.json.JsonObject;
-
 import java.io.IOException;
+import java.util.List;
 
 /**
  * Created by hehaiyuan on 10/27/16.
  */
-public interface Formatter<T> {
+public interface Formatter{
     /**
      * @param resp get response form Request
      * @return write MetcisWithToken when use openTSDB to persist or write into log file  without formatter
      * @throws IOException
      */
-    T format(JsonObject resp) throws IOException;
+    List format(String resp) throws IOException;
 }

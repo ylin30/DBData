@@ -1,32 +1,154 @@
 # Timetask 时间
 # 所有的service 和对应的token 暂时是写成配置. 后面看看是不是有人提供service 给我们. 可以做成filter 的功能. 在parse 之前.
 
-dump:
-  - metricsLog: /home/111.log
-  - systemsLog: /tmp/tides.log
+metricsServer: http://localhost:4242/api/put?details
+# 后面想想这里怎么能够通过传一个参数来修改.
+# systemsLog: /tmp/tides.log / 可以通过log4j 来直接修改.
 
 AInsigth:
-  interval: 1m
+  taskInterval: 60
   applications:
     - name: dztier
       openId: 9
       url: http://10.1.130.102:8091/api/v2
-      token: 7ef809091178e7a3093bde7cc6a83d0b5700cbeb11dc6fdaf8c8f18bee46118b2c385b65189fee4d1d5c2ee042df1566a0c0
-
+      token: eyJrIjoiSDVUS2VVbjZGdVVVQVBZMCIsIm4iOiIxIiwiaWQiOjF9
+      spanTime: 240000
+      interval: 60000
+    - name: aaaa
+      openId: 3
+      url: http://10.1.130.102:8091/api/v2
+      token: eyJrIjoiSDVUS2VVbjZGdVVVQVBZMCIsIm4iOiIxIiwiaWQiOjF9
+      spanTime: 240000
+      interval: 60000
 
   services:
-    - uri: /applications?openid=%s&application_name=%s&span_time=%s&interval=%s
-      formatter: modelname . elum class (metrics, none, log, )
-      writer: writerName(defalut by openTSDB) elum class
-      alias: will be metrics name , use response name by defalut
+    - uri: /applications
+      formatter: com.cloudmon.formatter.DefalutFormatter
       tags:
-        - service: web_transation
-    - uri: /applications?openid=%s&application_name=%s&span_time=%s&interval=%s
-      formatter: modelname . elum class (metrics, none, log, )
-      writer: writerName(defalut by openTSDB) elum class
-      alias: will be metrics name , use response name by defalut
+        service: applications
+    - uri: /applications/cpu
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
       tags:
-        - service: web_transation
+        service: applications
+    - uri: /applications/memory
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: applications
+    - uri: /applications/throughput
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: applications
+    - uri: /applications/errors
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: applications
+    - uri: /applications/response%20time
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: applications
+    - uri: /applications/apdex
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: applications
+    # 应用设置不提取
+# 这堆 都有问题, 需要给我agents name 才能访问. 还是不要算了
+#    - uri: /agents
+#      formatter: com.cloudmon.formatter.DefalutFormatter
+#      tags:
+#        service: agent
+#    - uri: /agents/cpu
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agent
+#    - uri: /agents/memory
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agent
+#    - uri: /agents/throughput
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agent
+#    - uri: /agents/errors
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agents
+#    - uri: /agents/response%20time
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agents
+#    - uri: /agents/apdex
+#      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+#      tags:
+#        service: agents
+    # 报警设置 不提取
+
+    - uri: /transactions/Datastore
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: datastore
+    - uri: /transactions/Datastore/response%20time
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: datastore
+    - uri: /transactions/Datastore/throughput
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: datastore
 
 
-metricsServer: http://localhost:4242/api/put?details
+    - uri: /error
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: error
+
+
+    - uri: /transactions/WebTransaction
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: web_transaction
+    - uri: /transactions/WebTransaction/throughput
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: web_transaction
+    - uri: /transactions/WebTransaction/response%20time
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: web_transaction
+    - uri: /transactions/WebTransaction/apdex
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: web_transaction
+
+
+    - uri: /transactions/OtherTransaction
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: other_transaction
+    - uri: /transactions/OtherTransaction/response%20time
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: other_transaction
+    - uri: /transactions/OtherTransaction/throughput
+      formatter: com.cloudmon.formatter.OneapmMetricsFormatter
+      tags:
+        service: other_transaction
+
+
+    - uri: /slowTrans
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: slow_trans
+    - uri: /slowTrans/segment
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: slow_trans
+
+
+    - uri: /slowSqls
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: slow_sql
+    - uri: /slowSqls/trace
+      formatter: com.cloudmon.formatter.DefalutFormatter
+      tags:
+        service: slow_sql

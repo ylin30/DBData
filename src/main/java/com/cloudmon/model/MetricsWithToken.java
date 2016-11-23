@@ -4,14 +4,19 @@ import java.util.List;
 
 
 public class MetricsWithToken {
-    private List<Metrics> metrics;
+    private List<Metric> metrics;
     private String token;
 
-    public List<Metrics> getMetrics() {
+    public MetricsWithToken(List<Metric> metrics, String token) {
+        this.metrics = metrics;
+        this.token = token;
+    }
+
+    public List<Metric> getMetrics() {
         return metrics;
     }
 
-    public void setMetrics(List<Metrics> metrics) {
+    public void setMetrics(List<Metric> metrics) {
         this.metrics = metrics;
     }
 

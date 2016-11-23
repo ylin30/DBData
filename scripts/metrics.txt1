@@ -1,4 +1,0 @@
-{\"metric\":\"User.Utilization\",\"tags\":{\"service\":\"http\"},\"timestamp\":1472541600,\"value\":10.98601330576069}
-{\"metric\":\"Used\",\"tags\":{\"service\":\"http\"},\"timestamp\":1472557656,\"value\":4.933161708424727}
-{\"metric\":\"Used\",\"tags\":{\"service\":\"http\"},\"timestamp\":1472557716,\"value\":4.7473373450677325}
-{\"metric\":\"Used\",\"tags\":{\"service\":\"http\"},\"timestamp\":1472557776,\"value\":11.708921273837088}
