@@ -1,9 +1,10 @@
 import com.cloudmon.JacksonUtil;
 import com.cloudmon.RequestWapper;
+import com.cloudmon.oneapm.Point;
+import com.cloudmon.oneapm.Points;
+import com.cloudmon.oneapm.Results;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
-import org.json.JSONArray;
-import org.json.JSONObject;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -16,44 +17,21 @@ import java.sql.*;
 import java.util.*;
 
 
-public class DBDataRetriever {
-    private final static Logger logger = LoggerFactory.getLogger(DBDataRetriever.class);
-    private final BufferedWriter bufferedFileWriter;
-    private final static String ONEAPM_SERVER = "http://10.1.130.102:8091/api/v2";
-    private final static String OPEN_ID = "9";
-    private final static String APP_NAME = "dztier";
-    private final static int SPAN_TIME = 240000;
-    private final static int INTERVAL = 60000;
+public class DBDataRetriever extends TimerTask {
+    private Logger logger = LoggerFactory.getLogger(DBDataRetriever.class);
+    private String ONEAPM_SERVER;
+    private String OPEN_ID = "9";
+    private String APP_NAME;
+    private int SPAN_TIME = 240000;
+    private int INTERVAL = 60000;
+    private String opentsdbUrl;
+    private Timer timer;
+    private int taskInterval;
 
     private final Random rand = new Random();
     private final List<RequestWapper> apis = new ArrayList<>();
 
-    public static void main(String[] args) throws IOException {
-        String filename = args.length > 0 ? args[0] : null;
-        DBDataRetriever retriever = null;
-        try {
-            retriever = new DBDataRetriever(filename);
-            retriever.run();
-        } catch(Exception e) {
-            System.out.println(e);
-        } finally {
-            if (retriever != null) {
-                retriever.close();
-            }
-        }
-    }
-
-    public DBDataRetriever(String filename) throws IOException {
-        if (filename == null || filename.isEmpty()) {
-            filename = "metrics.txt";
-        }
-        final File f = new File(filename);
-        if (!f.exists()) {
-            f.createNewFile();
-        }
-        FileWriter fw = new FileWriter(f.getAbsoluteFile());
-        this.bufferedFileWriter = new BufferedWriter(fw);
-
+    public DBDataRetriever() throws IOException {
         //application
         RequestWapper req = new RequestWapper();
         req.setUrl(String.format("%s/applications?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
@@ -64,91 +42,91 @@ public class DBDataRetriever {
         req1.setUrl(String.format("%s/applications/cpu?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req1.setType("points");
         req1.setMetric("usage_rate");
-        req1.setTags("service","applications");
+        req1.setTags("service", "applications");
         this.apis.add(req1);
 
         RequestWapper req2 = new RequestWapper();
         req2.setUrl(String.format("%s/applications/memory?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req2.setType("points");
         req2.setMetric("memory_rate");
-        req2.setTags("service","applications");
+        req2.setTags("service", "applications");
         this.apis.add(req2);
 
         RequestWapper req3 = new RequestWapper();
         req3.setUrl(String.format("%s/applications/throughput?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req3.setType("points");
         req3.setMetric("throughput");
-        req3.setTags("service","applications");
+        req3.setTags("service", "applications");
         this.apis.add(req3);
 
         RequestWapper req4 = new RequestWapper();
         req4.setUrl(String.format("%s/applications/errors?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req4.setType("points");
         req4.setMetric("error_rate");
-        req4.setTags("service","applications");
+        req4.setTags("service", "applications");
         this.apis.add(req4);
 
         RequestWapper req5 = new RequestWapper();
         req5.setUrl(String.format("%s/applications/response%%20time?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req5.setType("points");
         req5.setMetric("avg_response_time");
-        req5.setTags("service","applications");
+        req5.setTags("service", "applications");
         this.apis.add(req5);
 
         RequestWapper req6 = new RequestWapper();
         req6.setUrl(String.format("%s/applications/apdex?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req6.setType("points");
         req6.setMetric("apdex");
-        req6.setTags("service","applications");
+        req6.setTags("service", "applications");
         this.apis.add(req6);
 
-        //agent need agent_name
-        RequestWapper req37 = new RequestWapper();
-        req37.setUrl(String.format("%s/agents?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
-        req37.setType("list");
-        this.apis.add(req37);
-
-        RequestWapper req38 = new RequestWapper();
-        req38.setUrl(String.format("%s/agents/cpu?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req38.setType("points");
-        req38.setMetric("usage_rate");
-        req38.setTags("service","agent");
-        this.apis.add(req38);
-
-        RequestWapper req39 = new RequestWapper();
-        req39.setUrl(String.format("%s/agents/memory?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req39.setType("points");
-        req39.setMetric("memory_rate");
-        req39.setTags("service","agent");
-        this.apis.add(req39);
-
-        RequestWapper req40 = new RequestWapper();
-        req40.setUrl(String.format("%s/agents/throughput?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req40.setType("points");
-        req40.setMetric("throughput");
-        req40.setTags("service","agent");
-        this.apis.add(req40);
-
-        RequestWapper req41 = new RequestWapper();
-        req41.setUrl(String.format("%s/agents/response%%20time?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req41.setType("points");
-        req41.setMetric("avg_response_time");
-        req41.setTags("service","agent");
-        this.apis.add(req41);
-
-        RequestWapper req42 = new RequestWapper();
-        req42.setUrl(String.format("%s/agents/apdex?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req42.setType("points");
-        req42.setMetric("apdex");
-        req42.setTags("service","agent");
-        this.apis.add(req42);
-
-        RequestWapper req43 = new RequestWapper();
-        req43.setUrl(String.format("%s/agents/errors?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
-        req43.setType("points");
-        req43.setMetric("error_rate");
-        req43.setTags("service","agent");
-        this.apis.add(req43);
+//        //agent need agent_name
+//        RequestWapper req37 = new RequestWapper();
+//        req37.setUrl(String.format("%s/agents?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
+//        req37.setType("list");
+//        this.apis.add(req37);
+//
+//        RequestWapper req38 = new RequestWapper();
+//        req38.setUrl(String.format("%s/agents/cpu?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req38.setType("points");
+//        req38.setMetric("usage_rate");
+//        req38.setTags("service","agent");
+//        this.apis.add(req38);
+//
+//        RequestWapper req39 = new RequestWapper();
+//        req39.setUrl(String.format("%s/agents/memory?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req39.setType("points");
+//        req39.setMetric("memory_rate");
+//        req39.setTags("service","agent");
+//        this.apis.add(req39);
+//
+//        RequestWapper req40 = new RequestWapper();
+//        req40.setUrl(String.format("%s/agents/throughput?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req40.setType("points");
+//        req40.setMetric("throughput");
+//        req40.setTags("service","agent");
+//        this.apis.add(req40);
+//
+//        RequestWapper req41 = new RequestWapper();
+//        req41.setUrl(String.format("%s/agents/response%%20time?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req41.setType("points");
+//        req41.setMetric("avg_response_time");
+//        req41.setTags("service","agent");
+//        this.apis.add(req41);
+//
+//        RequestWapper req42 = new RequestWapper();
+//        req42.setUrl(String.format("%s/agents/apdex?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req42.setType("points");
+//        req42.setMetric("apdex");
+//        req42.setTags("service","agent");
+//        this.apis.add(req42);
+//
+//        RequestWapper req43 = new RequestWapper();
+//        req43.setUrl(String.format("%s/agents/errors?openid=%s&application_name=%s&span_time=%s&interval=%s&agent_name=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL,"java:dztier:8081(localhost.localdomain)"));
+//        req43.setType("points");
+//        req43.setMetric("error_rate");
+//        req43.setTags("service","agent");
+//        this.apis.add(req43);
 
         //datasotre
         RequestWapper req7 = new RequestWapper();
@@ -160,14 +138,14 @@ public class DBDataRetriever {
         req8.setUrl(String.format("%s/transactions/Datastore/response%%20time?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req8.setType("points");
         req8.setMetric("avg_response_time");
-        req8.setTags("service","datastore");
+        req8.setTags("service", "datastore");
         this.apis.add(req8);
 
         RequestWapper req9 = new RequestWapper();
         req9.setUrl(String.format("%s/transactions/Datastore/throughput?openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req9.setType("points");
         req9.setMetric("throughput");
-        req9.setTags("service","datastore");
+        req9.setTags("service", "datastore");
         this.apis.add(req9);
 
         //Web事务
@@ -180,28 +158,28 @@ public class DBDataRetriever {
         req11.setUrl(String.format("%s/transactions/WebTransaction/throughput?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req11.setType("points");
         req11.setMetric("throughput");
-        req11.setTags("service","web_transaction");
+        req11.setTags("service", "web_transaction");
         this.apis.add(req11);
 
         RequestWapper req12 = new RequestWapper();
         req12.setUrl(String.format("%s/transactions/WebTransaction/errors?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req12.setType("points");
         req12.setMetric("error_rate");
-        req12.setTags("service","web_transaction");
+        req12.setTags("service", "web_transaction");
         this.apis.add(req12);
 
         RequestWapper req13 = new RequestWapper();
         req13.setUrl(String.format("%s/transactions/WebTransaction/response%%20time?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req13.setType("points");
         req13.setMetric("avg_response_time");
-        req13.setTags("service","web_transaction");
+        req13.setTags("service", "web_transaction");
         this.apis.add(req13);
 
         RequestWapper req14 = new RequestWapper();
         req14.setUrl(String.format("%s/transactions/WebTransaction/apdex?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req14.setType("points");
         req14.setMetric("apdex");
-        req14.setTags("service","web_transaction");
+        req14.setTags("service", "web_transaction");
         this.apis.add(req14);
 
 
@@ -210,22 +188,20 @@ public class DBDataRetriever {
         req15.setUrl(String.format("%s/transactions/OtherTransaction/response%%20time?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req15.setType("points");
         req15.setMetric("avg_response_time");
-        req15.setTags("service","other_transaction");
+        req15.setTags("service", "other_transaction");
         this.apis.add(req15);
 
         RequestWapper req16 = new RequestWapper();
         req16.setUrl(String.format("%s/transactions/OtherTransaction/throughput?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req16.setType("points");
         req16.setMetric("throughput");
-        req16.setTags("service","other_transaction");
+        req16.setTags("service", "other_transaction");
         this.apis.add(req16);
 
         RequestWapper req17 = new RequestWapper();
         req17.setUrl(String.format("%s/error?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req17.setType("errors");
         this.apis.add(req17);
-
-
 
         //slow sql
         RequestWapper req18 = new RequestWapper();
@@ -245,38 +221,36 @@ public class DBDataRetriever {
 
     }
 
-    private void run() throws IOException, InterruptedException {
-        while (true) {
-            try {
-                for (RequestWapper reqWapper : this.apis) {
-                    Metrics metrics = queryOneAPMApi(reqWapper);
-                    //Metrics metrics = createOneAPMMetrics();
-                    writeToFile(metrics);
-                    writeToMetricServer(metrics);
-                    Thread.sleep(1000);
-                }
-                Thread.sleep(60000); // 1 minutes
-            } catch (SocketException e){
-                System.out.println("network have disconnected");
-                Thread.sleep(30000);
-            } catch (Exception e) {
-                System.out.println("In run:"+ e);
+    @Override
+    public void run() {
+        try {
+            for (RequestWapper reqWapper : this.apis) {
+                Metrics metrics = queryOneAPMApi(reqWapper);
+                //Metrics metrics = createOneAPMMetrics();
+                writeToFile(metrics);
+                writeToMetricServer(metrics);
             }
-
-            System.out.println("------------------");
+        } catch (SocketException e){
+            logger.error("network have disconnected");
+            try {
+                Thread.sleep(30000);
+            } catch (InterruptedException e1) {
+                e1.printStackTrace();
+            }
+        } catch (Exception e) {
+            logger.error("Error in {} ", getAPP_NAME(), e);
         }
     }
 
     private Metrics queryOneAPMApi(RequestWapper serverUrl) throws IOException {
-        System.out.println("connect to ONEAPM server " + serverUrl);
+        System.out.println("connect to ONEAPM server " + serverUrl.getUrl());
         BufferedReader in = null;
         try {
             URL url = new URL(serverUrl.getUrl());
             HttpURLConnection con = (HttpURLConnection) url.openConnection();
             con.setRequestMethod("GET");
             int responseCode = con.getResponseCode();
-            System.out.println("\nSending 'GET' request to URL : " + url);
-            System.out.println("Response Code : " + responseCode);
+            logger.info("Response Code : " + responseCode);
 
             in = new BufferedReader(new InputStreamReader(con.getInputStream()));
             String inputLine;
@@ -286,60 +260,58 @@ public class DBDataRetriever {
                 response.append(inputLine);
             }
             final String content = response.toString();
-            // System.out.println("\ncontent:" + content);
+            logger.debug("\ncontent:" + content);
 
-            return parseJSON(content,serverUrl);
-        } catch(Exception e) {
-            System.out.println(String.format("error: failed to query metric %s, exception %s", serverUrl, e));
-            throw e;
+            return parseJSON(content, serverUrl);
+        } catch (Exception e) {
+            logger.error("error: failed to query metric {}, exception ", serverUrl, e);
+            return null;
         } finally {
             if (in != null) {
                 try {
                     in.close();
                 } catch (Exception ee) {
-                    System.out.println("warning: failed to close BufferedReader. Exception " + ee);
+                    logger.error("warning: failed to close BufferedReader. Exception ", ee);
                 }
             }
         }
     }
 
-    private Metrics parseJSON(String content, RequestWapper reqWapper) {
+    private Metrics parseJSON(String content, RequestWapper reqWapper) throws IOException {
         //TODO 后面想办法写这个parse
-        if(!reqWapper.getType().equals("points")){
-            logger.info(content);
+        if (!reqWapper.getType().equals("points")) {
+            logger.debug(content);
             return null;
         }
 
         Metrics metrics = new Metrics();
-        JSONObject obj = new JSONObject(content);
-        int code = obj.getInt("code");
-        String msg = obj.getString("msg");
-        JSONArray results = obj.getJSONArray("results");
-        for (int i = 0; i < results.length(); i++) {
-            JSONObject resultObj = results.getJSONObject(i);
-            String tagName = resultObj.getString("name");
-            String metricName = reqWapper.getMetric();
-            reqWapper.setTags("host","dztier");
-            reqWapper.setTags("name",tagName.replace("/","."));
-            JSONArray points = resultObj.getJSONArray("points");
-            for (int j = 0; j < points.length()-1; j++) {
-                JSONObject pointObj = points.getJSONObject(j);
-                double val = pointObj.getJSONObject("data").getDouble(reqWapper.getMetric());
-                long ts = pointObj.getJSONObject("time").getLong("endTime");
-                Metric m = new Metric(metricName, ts, val, reqWapper.getTags());
-                metrics.metrics.add(m);
+        try {
+            Points points = JacksonUtil.fromJson(content, Points.class);
+            for (Results r : points.getResults()) {
+                for (Point p : r.getPoints()) {
+                    Double data = 0d;
+                    if (p.getData() != null) {
+                        data = Double.valueOf(p.getData().get(reqWapper.getMetric()).toString());
+                    }
+                    Metric m = new Metric(reqWapper.getMetric(), Long.valueOf(p.getTime().get("endTime").toString()), data, reqWapper.getTags());
+                    metrics.metrics.add(m);
+                }
             }
+        } catch (IOException e) {
+            logger.error("error in parse metric json", e);
         }
+
         return metrics;
     }
 
-    private  void writeToFile(Metrics metrics) throws IOException {
-        if(metrics == null)
-            return ;
+    private void writeToFile(Metrics metrics) throws IOException {
+        if (metrics == null)
+            return;
 
         String payload = constructJson(metrics);
-        logger.info(payload);
+        logger.debug(payload);
     }
+
     private Metrics createOneAPMMetrics() {
 
         //String[] oneAPMMetrics = new String[] {"Spring.com.srie.cis.service.impl.WSServiceImpl.getDispatchCode", "JSP.up.upload.jsp", "JSP.esign.creatpng.jsp",
@@ -350,7 +322,7 @@ public class DBDataRetriever {
         req.setUrl(String.format("%s/transactions/WebTransaction/response%%20time?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
         req.setType("points");
         req.setMetric("avg_response_time");
-        req.setTags("service","web_transaction");
+        req.setTags("service", "web_transaction");
         this.apis.add(req);
 
         RequestWapper[] oneAPMMetrics = new RequestWapper[]{req};
@@ -360,7 +332,7 @@ public class DBDataRetriever {
         int count = 60;
         while (count-- > 0) {
             for (RequestWapper requestWapper : oneAPMMetrics) {
-                Metric m = new Metric(requestWapper.getMetric(), start.getTime().getTime(), rand.nextDouble() * 20,requestWapper.getTags());
+                Metric m = new Metric(requestWapper.getMetric(), start.getTime().getTime(), rand.nextDouble() * 20, requestWapper.getTags());
                 metrics.metrics.add(m);
             }
             start.add(Calendar.MINUTE, 1);
@@ -368,15 +340,15 @@ public class DBDataRetriever {
         return metrics;
     }
 
-    private  void writeToMetricServer(Metrics metrics) throws IOException, InterruptedException {
-        if(metrics == null){
-            return ;
+    private void writeToMetricServer(Metrics metrics) throws IOException, InterruptedException, SocketException {
+        if (metrics == null) {
+            return;
         }
         OutputStream wr = null;
         InputStream is = null;
         try {
             //URL url = new URL("http://172.16.210.247:4242/api/put?details");
-            URL url = new URL("http://10.1.130.46:4242/api/put");
+            URL url = new URL(this.getOpentsdbUrl());
 
             HttpURLConnection connection = (HttpURLConnection) url.openConnection();
             connection.setRequestMethod("POST");
@@ -401,8 +373,8 @@ public class DBDataRetriever {
                     response.append('\r');
                 }
                 //System.out.println(response.toString());
-            } catch(Exception e) {
-                System.out.println(e);
+            } catch (Exception e) {
+                throw e;
             } finally {
                 if (is != null) {
                     is.close();
@@ -413,10 +385,6 @@ public class DBDataRetriever {
                 wr.close();
             }
         }
-    }
-
-    private void close() throws IOException {
-        this.bufferedFileWriter.close();
     }
 
     private static String constructJson(Metrics metrics) throws JsonProcessingException {
@@ -481,16 +449,16 @@ public class DBDataRetriever {
             //rs = stmt.executeQuery("select empid, name from Employee");
             stmt = con.prepareStatement("select empid, name from Employee");
             rs = stmt.executeQuery();
-            while(rs.next()){
-                System.out.println("Employee ID="+rs.getInt("empid")+", Name="+rs.getString("name"));
+            while (rs.next()) {
+                System.out.println("Employee ID=" + rs.getInt("empid") + ", Name=" + rs.getString("name"));
             }
         } catch (SQLException e) {
             e.printStackTrace();
-        }finally{
+        } finally {
             try {
-                if(rs != null) rs.close();
-                if(stmt != null) stmt.close();
-                if(con != null) con.close();
+                if (rs != null) rs.close();
+                if (stmt != null) stmt.close();
+                if (con != null) con.close();
             } catch (SQLException e) {
                 e.printStackTrace();
             }
@@ -503,9 +471,9 @@ public class DBDataRetriever {
         private final long timestamp;
         private double value;
 
-        public Metric(String metric, long timestamp, double value, Map<String,String> appendTags) {
+        public Metric(String metric, long timestamp, double value, Map<String, String> appendTags) {
             this.metric = metric;
-            this.timestamp = timestamp/1000;
+            this.timestamp = timestamp / 1000;
             this.tags.put("method", "http");
             this.tags.putAll(appendTags);
             this.value = value;
@@ -530,7 +498,7 @@ public class DBDataRetriever {
 
     private static class Metrics {
         public final List<Metric> metrics = new ArrayList<>();
-        public final String token="bd4d77d0e1dc8317abce2f51b52e08c35e9572a10d7d055ebb635e1f159b384464e85f0f1fd16a526fca440ff88377c3d308";
+        public final String token = "bd4d77d0e1dc8317abce2f51b52e08c35e9572a10d7d055ebb635e1f159b384464e85f0f1fd16a526fca440ff88377c3d308";
     }
 
     private static class Tuple {
@@ -541,6 +509,54 @@ public class DBDataRetriever {
             this.first = f;
             this.second = s;
         }
+    }
+
+    public String getONEAPM_SERVER() {
+        return ONEAPM_SERVER;
+    }
+
+    public void setONEAPM_SERVER(String ONEAPM_SERVER) {
+        this.ONEAPM_SERVER = ONEAPM_SERVER;
+    }
+
+    public String getOPEN_ID() {
+        return OPEN_ID;
+    }
+
+    public void setOPEN_ID(String OPEN_ID) {
+        this.OPEN_ID = OPEN_ID;
+    }
+
+    public String getAPP_NAME() {
+        return APP_NAME;
+    }
+
+    public void setAPP_NAME(String APP_NAME) {
+        this.APP_NAME = APP_NAME;
+    }
+
+    public String getOpentsdbUrl() {
+        return opentsdbUrl;
+    }
+
+    public void setOpentsdbUrl(String opentsdbUrl) {
+        this.opentsdbUrl = opentsdbUrl;
+    }
+
+    public Timer getTimer() {
+        return timer;
+    }
+
+    public void setTimer(Timer timer) {
+        this.timer = timer;
+    }
+
+    public int getTaskInterval() {
+        return taskInterval;
+    }
+
+    public void setTaskInterval(int taskInterval) {
+        this.taskInterval = taskInterval;
     }
 
 }
