@@ -25,8 +25,6 @@ public class DBDataRetriever extends TimerTask {
     private int SPAN_TIME = 240000;
     private int INTERVAL = 60000;
     private String opentsdbUrl;
-    private Timer timer;
-    private int taskInterval;
 
     private final Random rand = new Random();
     private final List<RequestWapper> apis = new ArrayList<>();
@@ -541,22 +539,6 @@ public class DBDataRetriever extends TimerTask {
 
     public void setOpentsdbUrl(String opentsdbUrl) {
         this.opentsdbUrl = opentsdbUrl;
-    }
-
-    public Timer getTimer() {
-        return timer;
-    }
-
-    public void setTimer(Timer timer) {
-        this.timer = timer;
-    }
-
-    public int getTaskInterval() {
-        return taskInterval;
-    }
-
-    public void setTaskInterval(int taskInterval) {
-        this.taskInterval = taskInterval;
     }
 
 }

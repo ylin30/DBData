@@ -2,6 +2,7 @@ package com.cloudmon;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.JavaType;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import java.io.IOException;
@@ -28,5 +29,13 @@ public class JacksonUtil {
 
     public static<T> List<T> listFromJson(String s) throws IOException {
         return objectMapper.readValue(s, new TypeReference<List<T>>(){});
+    }
+
+    public static<T> T fromJson(String jsonString, JavaType javaType) throws IOException {
+        return objectMapper.readValue(jsonString, javaType);
+    }
+
+    public static JavaType getCollectionType(Class<?> collectionClass, Class<?>... elementClasses) {
+        return objectMapper.getTypeFactory().constructParametricType(collectionClass, elementClasses);
     }
 }
