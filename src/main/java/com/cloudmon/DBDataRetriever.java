@@ -1,19 +1,16 @@
-import com.cloudmon.JacksonUtil;
-import com.cloudmon.RequestWapper;
+package com.cloudmon;
+
 import com.cloudmon.oneapm.Point;
 import com.cloudmon.oneapm.Points;
 import com.cloudmon.oneapm.Results;
 import com.fasterxml.jackson.core.JsonProcessingException;
-import com.mysql.jdbc.jdbc2.optional.MysqlConnectionPoolDataSource;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import javax.sql.PooledConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.SocketException;
 import java.net.URL;
-import java.sql.*;
 import java.util.*;
 
 
@@ -180,7 +177,6 @@ public class DBDataRetriever extends TimerTask {
         req14.setTags("service", "web_transaction");
         this.apis.add(req14);
 
-
         //后台任务
         RequestWapper req15 = new RequestWapper();
         req15.setUrl(String.format("%s/transactions/OtherTransaction/response%%20time?&openid=%s&application_name=%s&span_time=%s&interval=%s", ONEAPM_SERVER, OPEN_ID, APP_NAME, SPAN_TIME, INTERVAL));
@@ -241,7 +237,7 @@ public class DBDataRetriever extends TimerTask {
     }
 
     private Metrics queryOneAPMApi(RequestWapper serverUrl) throws IOException {
-        System.out.println("connect to ONEAPM server " + serverUrl.getUrl());
+        logger.debug("connect to ONEAPM server " + serverUrl.getUrl());
         BufferedReader in = null;
         try {
             URL url = new URL(serverUrl.getUrl());
@@ -310,6 +306,10 @@ public class DBDataRetriever extends TimerTask {
         logger.debug(payload);
     }
 
+    /**
+     * for Testing ?
+     * @return
+     */
     private Metrics createOneAPMMetrics() {
 
         //String[] oneAPMMetrics = new String[] {"Spring.com.srie.cis.service.impl.WSServiceImpl.getDispatchCode", "JSP.up.upload.jsp", "JSP.esign.creatpng.jsp",
@@ -370,7 +370,7 @@ public class DBDataRetriever extends TimerTask {
                     response.append(line);
                     response.append('\r');
                 }
-                //System.out.println(response.toString());
+                logger.debug(response.toString());
             } catch (Exception e) {
                 throw e;
             } finally {
@@ -393,75 +393,75 @@ public class DBDataRetriever extends TimerTask {
         return JacksonUtil.toJson(metric);
     }
 
-    private static void queryOracle(String query) {
-        System.out.println("-------- Oracle JDBC Connection Testing ------");
-
-        try {
-            Class.forName("oracle.jdbc.driver.OracleDriver");
-        } catch (ClassNotFoundException e) {
-            System.out.println("Where is your Oracle JDBC Driver?");
-            e.printStackTrace();
-            return;
-        }
-        System.out.println("Oracle JDBC Driver Registered!");
-
-        Connection connection = null;
-        Statement stmt = null;
-        try {
-
-            connection = DriverManager.getConnection(
-                    "jdbc:oracle:thin:@10.1.132.118:1521:orcl", "jhpt_ky", "123456");
-            stmt = connection.createStatement();
-            ResultSet rs = stmt.executeQuery(query);
-            while (rs.next()) {
-                int count = rs.getInt(1);
-                System.out.println(count);
-            }
-
-        } catch (SQLException e) {
-            System.out.println("Connection Failed! Check output console");
-            e.printStackTrace();
-            return;
-        }
-    }
-
-    private static void queryMysql() {
-        System.out.println("test started");
-        String dbUrl = "jdbc:mysql://localhost:3306/grafana";
-        String user = "root";
-        String password = "password";
-
-        MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
-        ds.setUrl(dbUrl);
-        ds.setUser(user);
-        ds.setPassword(password);
-
-        PooledConnection pcon;
-        Connection con = null;
-        PreparedStatement stmt = null;
-        ResultSet rs = null;
-        try {
-            pcon = ds.getPooledConnection();
-            con = pcon.getConnection();
-            //stmt = con.createStatement();
-            //rs = stmt.executeQuery("select empid, name from Employee");
-            stmt = con.prepareStatement("select empid, name from Employee");
-            rs = stmt.executeQuery();
-            while (rs.next()) {
-                System.out.println("Employee ID=" + rs.getInt("empid") + ", Name=" + rs.getString("name"));
-            }
-        } catch (SQLException e) {
-            e.printStackTrace();
-        } finally {
-            try {
-                if (rs != null) rs.close();
-                if (stmt != null) stmt.close();
-                if (con != null) con.close();
-            } catch (SQLException e) {
-                e.printStackTrace();
-            }
-        }
-    }
+//    private static void queryOracle(String query) {
+//        System.out.println("-------- Oracle JDBC Connection Testing ------");
+//
+//        try {
+//            Class.forName("oracle.jdbc.driver.OracleDriver");
+//        } catch (ClassNotFoundException e) {
+//            System.out.println("Where is your Oracle JDBC Driver?");
+//            e.printStackTrace();
+//            return;
+//        }
+//        System.out.println("Oracle JDBC Driver Registered!");
+//
+//        Connection connection = null;
+//        Statement stmt = null;
+//        try {
+//
+//            connection = DriverManager.getConnection(
+//                    "jdbc:oracle:thin:@10.1.132.118:1521:orcl", "jhpt_ky", "123456");
+//            stmt = connection.createStatement();
+//            ResultSet rs = stmt.executeQuery(query);
+//            while (rs.next()) {
+//                int count = rs.getInt(1);
+//                System.out.println(count);
+//            }
+//
+//        } catch (SQLException e) {
+//            System.out.println("Connection Failed! Check output console");
+//            e.printStackTrace();
+//            return;
+//        }
+//    }
+//
+//    private static void queryMysql() {
+//        System.out.println("test started");
+//        String dbUrl = "jdbc:mysql://localhost:3306/grafana";
+//        String user = "root";
+//        String password = "password";
+//
+//        MysqlConnectionPoolDataSource ds = new MysqlConnectionPoolDataSource();
+//        ds.setUrl(dbUrl);
+//        ds.setUser(user);
+//        ds.setPassword(password);
+//
+//        PooledConnection pcon;
+//        Connection con = null;
+//        PreparedStatement stmt = null;
+//        ResultSet rs = null;
+//        try {
+//            pcon = ds.getPooledConnection();
+//            con = pcon.getConnection();
+//            //stmt = con.createStatement();
+//            //rs = stmt.executeQuery("select empid, name from Employee");
+//            stmt = con.prepareStatement("select empid, name from Employee");
+//            rs = stmt.executeQuery();
+//            while (rs.next()) {
+//                System.out.println("Employee ID=" + rs.getInt("empid") + ", Name=" + rs.getString("name"));
+//            }
+//        } catch (SQLException e) {
+//            e.printStackTrace();
+//        } finally {
+//            try {
+//                if (rs != null) rs.close();
+//                if (stmt != null) stmt.close();
+//                if (con != null) con.close();
+//            } catch (SQLException e) {
+//                e.printStackTrace();
+//            }
+//        }
+//    }
 
     class Metric {
         private final String metric;

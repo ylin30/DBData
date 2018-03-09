@@ -1,11 +1,15 @@
-import com.cloudmon.AlertTask;
+package com.cloudmon;
+
+import org.apache.commons.cli.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.util.Properties;
 import java.util.Timer;
+
 
 /**
  * Created by hehaiyuan on 2/8/18.
@@ -14,7 +18,28 @@ public class ApmDaemon {
     private static final Logger logger = LoggerFactory.getLogger(ApmDaemon.class);
 
     public static void main(String[] args) throws IOException {
-        InputStream is = ApmDaemon.class.getClassLoader().getResourceAsStream("DBData.conf");
+        Options options = new Options();
+
+        Option conf = new Option("c", "config", true, "config file");
+        conf.setRequired(false);
+        options.addOption(conf);
+
+        CommandLineParser parser = new DefaultParser();
+        HelpFormatter formatter = new HelpFormatter();
+        CommandLine cmd;
+
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            logger.error(e.getMessage());
+            formatter.printHelp("dbdata", options);
+
+            System.exit(1);
+            return;
+        }
+
+        String configFilePath = cmd.getOptionValue("config");
+        InputStream is = new FileInputStream(configFilePath);
         final Properties properties = new Properties();
         properties.load(is);
         String app_names = (String) properties.get("app_name");

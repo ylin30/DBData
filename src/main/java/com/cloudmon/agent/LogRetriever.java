@@ -75,7 +75,7 @@ public class LogRetriever implements Runnable{
 
 
     public String queryOneAPMApi(String logAccess) throws IOException {
-        System.out.println("connect to ONEAPM server " + logAccess);
+        logger.debug("connect to ONEAPM server " + logAccess);
         BufferedReader in = null;
         try {
             URL url = new URL(logAccess);

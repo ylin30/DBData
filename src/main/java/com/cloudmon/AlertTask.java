@@ -63,7 +63,7 @@ public class AlertTask extends TimerTask {
     }
 
     public List<Alert> getAlerts(String strUrl) {
-        System.out.println("connect to ONEAPM server " + strUrl);
+        logger.debug("connect to ONEAPM server " + strUrl);
         BufferedReader in = null;
         try {
             URL url = new URL(strUrl);
